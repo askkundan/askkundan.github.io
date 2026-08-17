@@ -1,163 +1,89 @@
-// ============================================
-// SMOOTH SCROLLING FOR NAVIGATION LINKS
-// ============================================
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
+// ---------------------------------------------------------------
+// Kundan Kumar — Portfolio interactions
+// ---------------------------------------------------------------
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* Mobile nav toggle */
+  const toggle = document.querySelector('.nav-toggle');
+  const links = document.querySelector('.nav-links');
+  if (toggle && links) {
+    toggle.addEventListener('click', () => {
+      links.classList.toggle('open');
     });
-});
+    links.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => links.classList.remove('open'));
+    });
+  }
 
-// ============================================
-// PROGRESS BAR ANIMATION ON SCROLL
-// ============================================
-const observerOptions = {
-    threshold: 0.2,
-    rootMargin: '0px 0px -50px 0px'
-};
+  /* Mark active nav link based on current page */
+  const current = (location.pathname.split('/').pop() || 'index.html');
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    const href = a.getAttribute('href');
+    if (href === current || (current === '' && href === 'index.html')) {
+      a.classList.add('active');
+    }
+  });
 
-const observer = new IntersectionObserver(function(entries) {
-    entries.forEach(entry => {
+  /* Animate skill meters / dials / language bars when they enter view */
+  const fillTargets = document.querySelectorAll('[data-fill]');
+  if (fillTargets.length) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
         if (entry.isIntersecting) {
-            entry.target.style.animation = 'fadeInUp 0.6s ease forwards';
-            observer.unobserve(entry.target);
+          const el = entry.target;
+          const value = el.getAttribute('data-fill');
+          if (el.classList.contains('dial-ring')) {
+            const circumference = 251.2;
+            const offset = circumference - (circumference * value / 100);
+            el.style.strokeDashoffset = offset;
+          } else {
+            el.style.width = value + '%';
+          }
+          io.unobserve(el);
         }
-    });
-}, observerOptions);
+      });
+    }, { threshold: 0.4 });
+    fillTargets.forEach(el => io.observe(el));
+  }
 
-// Observe skill cards
-document.querySelectorAll('.skill-card, .experience-item, .project-card, .education-item').forEach(el => {
-    el.style.opacity = '0';
-    observer.observe(el);
-});
-
-// ============================================
-// ANIMATE PROGRESS BARS WHEN VISIBLE
-// ============================================
-const progressObserver = new IntersectionObserver(function(entries) {
-    entries.forEach(entry => {
+  /* Animate numeric counters (e.g. percentage labels, stat numbers) */
+  const counters = document.querySelectorAll('[data-count]');
+  if (counters.length) {
+    const ioC = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
         if (entry.isIntersecting) {
-            const progress = entry.target.querySelector('.progress');
-            if (progress) {
-                progress.style.animation = 'none';
-                setTimeout(() => {
-                    progress.style.animation = 'fillProgress 1.5s ease forwards';
-                }, 100);
-            }
-            progressObserver.unobserve(entry.target);
+          const el = entry.target;
+          const target = parseInt(el.getAttribute('data-count'), 10);
+          const suffix = el.getAttribute('data-suffix') || '';
+          const duration = 1100;
+          const start = performance.now();
+          function tick(now) {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(eased * target) + suffix;
+            if (progress < 1) requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+          ioC.unobserve(el);
         }
+      });
+    }, { threshold: 0.5 });
+    counters.forEach(el => ioC.observe(el));
+  }
+
+  /* Contact form: no backend, so just prevent default and show a note */
+  const form = document.querySelector('#contact-form');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = form.querySelector('#name')?.value || 'there';
+      const btn = form.querySelector('button[type="submit"]');
+      const original = btn.textContent;
+      btn.textContent = 'Message noted ✓';
+      form.reset();
+      setTimeout(() => { btn.textContent = original; }, 2600);
     });
-}, { threshold: 0.5 });
+  }
 
-document.querySelectorAll('.skill-card').forEach(el => {
-    progressObserver.observe(el);
 });
-
-// ============================================
-// ADD ACTIVE STATE TO NAVIGATION ON SCROLL
-// ============================================
-window.addEventListener('scroll', () => {
-    let current = '';
-    
-    document.querySelectorAll('section').forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        
-        if (pageYOffset >= sectionTop - 200) {
-            current = section.getAttribute('id');
-        }
-    });
-
-    document.querySelectorAll('.nav-links a').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href').slice(1) === current) {
-            link.classList.add('active');
-        }
-    });
-});
-
-// ============================================
-// STATS COUNTER ANIMATION
-// ============================================
-const statsSection = document.querySelector('.stats');
-if (statsSection) {
-    const statsObserver = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                document.querySelectorAll('.stat-item').forEach((stat, index) => {
-                    setTimeout(() => {
-                        stat.style.animation = 'fadeInUp 0.6s ease forwards';
-                    }, index * 100);
-                });
-                statsObserver.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.3 });
-
-    statsObserver.observe(statsSection);
-}
-
-// ============================================
-// KEYBOARD NAVIGATION SUPPORT
-// ============================================
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && document.activeElement.classList.contains('btn')) {
-        document.activeElement.click();
-    }
-});
-
-// ============================================
-// SMOOTH PAGE LOAD ANIMATION
-// ============================================
-window.addEventListener('load', () => {
-    document.body.style.opacity = '1';
-});
-
-// ============================================
-// ADD MISSING FILL PROGRESS ANIMATION
-// ============================================
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes fillProgress {
-        from {
-            width: 0;
-        }
-        to {
-            width: inherit;
-        }
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .nav-links a.active {
-        color: #FF6B35;
-        font-weight: bold;
-    }
-
-    body {
-        opacity: 0;
-        transition: opacity 0.5s ease;
-    }
-`;
-document.head.appendChild(style);
-
-// ============================================
-// CONSOLE WELCOME MESSAGE
-// ============================================
-console.log('%cWelcome to Kundan Kumar\'s Portfolio! 🚀', 'font-size: 20px; color: #FF6B35; font-weight: bold;');
-console.log('%cLet\'s build something amazing together!', 'font-size: 14px; color: #004E89;');
